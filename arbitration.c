@@ -17,6 +17,7 @@ void acquire_dongles(t_coder *coder)
 {
     t_req   req;
     long    now;
+    long    last_compile_start;
     t_env   *env;
 
     env = coder->env;
@@ -28,7 +29,12 @@ void acquire_dongles(t_coder *coder)
     if (env->config.scheduler == FIFO)
         req.priority_key = now;
     else
-        req.priority_key = coder->last_compile_start + env->config.time_to_burnout;
+    {
+        pthread_mutex_lock(&coder->state_mutex);
+        last_compile_start = coder->last_compile_start;
+        pthread_mutex_unlock(&coder->state_mutex);
+        req.priority_key = last_compile_start + env->config.time_to_burnout;
+    }
 
     pthread_mutex_lock(&env->table_mutex);
 
@@ -37,7 +43,28 @@ void acquire_dongles(t_coder *coder)
     {
         heap_push(&coder->left_dongle->wait_queue, req, env->config.scheduler);
         while (is_simulation_running(&env->config))
+        {
+            now = get_time_in_ms();
+            if (is_dongle_ready(coder->left_dongle, coder->id, now))
+            {
+                coder->left_dongle->in_use = 1;
+                heap_remove_id(&coder->left_dongle->wait_queue, coder->id,
+                    env->config.scheduler);
+                pthread_mutex_unlock(&env->table_mutex);
+                if (is_simulation_running(&env->config))
+                    print_status(coder, "has taken a dongle");
+                pthread_mutex_lock(&env->table_mutex);
+                while (is_simulation_running(&env->config))
+                    pthread_cond_wait(&env->table_cond, &env->table_mutex);
+                coder->left_dongle->in_use = 0;
+                coder->left_dongle->available_at = get_time_in_ms()
+                    + env->config.dongle_cooldown;
+                pthread_cond_broadcast(&env->table_cond);
+                pthread_mutex_unlock(&env->table_mutex);
+                return ;
+            }
             pthread_cond_wait(&env->table_cond, &env->table_mutex);
+        }
         heap_remove_id(&coder->left_dongle->wait_queue, coder->id, env->config.scheduler);
         pthread_mutex_unlock(&env->table_mutex);
         return;
@@ -65,10 +92,7 @@ void acquire_dongles(t_coder *coder)
     pthread_mutex_unlock(&env->table_mutex);
 
     if (is_simulation_running(&env->config))
-    {
         print_status(coder, "has taken a dongle");
-        print_status(coder, "has taken a dongle");
-    }
 }
 
 void release_dongles(t_coder *coder)

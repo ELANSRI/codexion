@@ -3,6 +3,7 @@
 
 # include <pthread.h>
 # include <sys/time.h>
+# include <time.h>
 # include <stdio.h>
 # include <stdlib.h>
 # include <string.h>
@@ -56,6 +57,7 @@ typedef struct s_coder {
     int             id;
     int             compile_count;
     long            last_compile_start;
+    pthread_mutex_t state_mutex;
     pthread_t       thread_id;
     t_dongle        *left_dongle;
     t_dongle        *right_dongle;

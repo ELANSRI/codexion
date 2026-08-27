@@ -37,14 +37,16 @@ void stop_simulation(t_config *config)
 void print_status(t_coder *coder, const char *status)
 {
     long current_time;
+    int  running;
 
-    if (!is_simulation_running(&coder->env->config))
-        return;
-    pthread_mutex_lock(&coder->env->config.write_mutex);
-    if (is_simulation_running(&coder->env->config))
+    pthread_mutex_lock(&coder->env->config.stop_mutex);
+    running = coder->env->config.simulation_running;
+    if (running)
     {
+        pthread_mutex_lock(&coder->env->config.write_mutex);
         current_time = get_time_in_ms() - coder->env->config.start_time;
         printf("%ld %d %s\n", current_time, coder->id, status);
+        pthread_mutex_unlock(&coder->env->config.write_mutex);
     }
-    pthread_mutex_unlock(&coder->env->config.write_mutex);
+    pthread_mutex_unlock(&coder->env->config.stop_mutex);
 }
