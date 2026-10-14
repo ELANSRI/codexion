@@ -1,52 +1,40 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   utils.c                                            :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: eanass <marvin@42.fr>                      +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/09/02 17:01:03 by eanass            #+#    #+#             */
+/*   Updated: 2026/09/02 17:01:05 by eanass           ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "codexion.h"
 
-long get_time_in_ms(void)
+int	error(char *error_msg)
 {
-    struct timeval tv;
-
-    gettimeofday(&tv, NULL);
-    return ((tv.tv_sec * 1000L) + (tv.tv_usec / 1000L));
+	printf("Error: %s\n", error_msg);
+	return (0);
 }
 
-void precise_sleep(long time_in_ms)
+long	get_time(void)
 {
-    long start;
+	struct timeval	tv;
 
-    start = get_time_in_ms();
-    while ((get_time_in_ms() - start) < time_in_ms)
-        usleep(250);
+	gettimeofday(&tv, NULL);
+	return ((tv.tv_sec * 1000) + (tv.tv_usec / 1000));
 }
 
-int is_simulation_running(t_config *config)
+void	precise_sleep(t_data *data, long time_in_ms)
 {
-    int running;
+	long	start;
 
-    pthread_mutex_lock(&config->stop_mutex);
-    running = config->simulation_running;
-    pthread_mutex_unlock(&config->stop_mutex);
-    return (running);
-}
-
-void stop_simulation(t_config *config)
-{
-    pthread_mutex_lock(&config->stop_mutex);
-    config->simulation_running = 0;
-    pthread_mutex_unlock(&config->stop_mutex);
-}
-
-void print_status(t_coder *coder, const char *status)
-{
-    long current_time;
-    int  running;
-
-    pthread_mutex_lock(&coder->env->config.stop_mutex);
-    running = coder->env->config.simulation_running;
-    if (running)
-    {
-        pthread_mutex_lock(&coder->env->config.write_mutex);
-        current_time = get_time_in_ms() - coder->env->config.start_time;
-        printf("%ld %d %s\n", current_time, coder->id, status);
-        pthread_mutex_unlock(&coder->env->config.write_mutex);
-    }
-    pthread_mutex_unlock(&coder->env->config.stop_mutex);
+	start = get_time();
+	while ((get_time() - start) < time_in_ms)
+	{
+		if (check_stop(data))
+			break ;
+		usleep(250);
+	}
 }

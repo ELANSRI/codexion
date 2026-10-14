@@ -1,20 +1,32 @@
 NAME        = codexion
+
 CC          = cc
 CFLAGS      = -Wall -Wextra -Werror -pthread
 
-SRCS        = main.c parsing.c init.c heap.c utils.c arbitration.c routine.c monitor.c
-OBJS        = $(SRCS:.c=.o)
+SRC         = codexion.c \
+              parsing.c \
+              init.c \
+              threads.c \
+              routine.c \
+              arbitrator.c \
+              monitor.c \
+              utils.c \
+              state.c
+
+OBJ         = $(SRC:.c=.o)
+
+HEADER      = codexion.h
 
 all: $(NAME)
 
-$(NAME): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(NAME)
+$(NAME): $(OBJ)
+	$(CC) $(CFLAGS) $(OBJ) -o $(NAME)
 
-%.o: %.c codexion.h
+%.o: %.c $(HEADER)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJS)
+	rm -f $(OBJ)
 
 fclean: clean
 	rm -f $(NAME)
